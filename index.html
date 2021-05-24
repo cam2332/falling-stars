@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- icons -->
+    <script src="https://kit.fontawesome.com/ee920f9a88.js" crossorigin="anonymous"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+            box-sizing: border-box;
+        }
+        
+        .main-div {
+            height: 100vh;
+            width: 100vw;
+            background-color: #0e121a;
+        }
+        
+        svg {
+            transform: rotate(0deg);
+            --color-stop-top: #4682b407;
+            --color-stop-middle: #43678534;
+            --color-stop-bottom: #ffd99f;
+            --color-circle: #fadab0;
+            --color-star: #faf4ec;
+        }
+        
+        svg-line {
+            margin: 40px;
+        }
+        
+        @keyframes show {
+            from {
+                height: 0px;
+            }
+            to {
+                height: 100%;
+            }
+        }
+        
+        .sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 60px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background: #343536;
+            background: linear-gradient(100deg, #42434490 0%, #38393a30 35%, #34353601 100%);
+            backdrop-filter: blur(2.0px);
+            -webkit-backdrop-filter: blur(2.0px);
+        }
+        
+        .buttons-left {
+            position: relative;
+            margin: 5px;
+            padding: 10px;
+            font-size: 16px;
+            height: 16px;
+            width: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            color: #fafafa;
+        }
+        
+        .buttons-left.rotate {
+            transition-duration: 0.4s;
+            transition-property: transform;
+            transform: rotate(180deg);
+            -webkit-transform: rotate(180deg);
+        }
+        
+        .buttons-left.hidden {
+            visibility: hidden;
+        }
+        
+        .templates-list.hidden {
+            visibility: hidden;
+        }
+        
+        .sidebar.hidden {
+            background: transparent;
+        }
+        
+        .templates-list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .backgroundTemplate {
+            margin: 10px;
+            cursor: pointer;
+        }
+        
+        #backgroundGradient stop {
+            transition: 2s;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="main-div">
+
+        <svg id="svgContainer" height="100%" width="100%">
+            <defs id="backgroundGradientDef">
+                <linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="0%" y2="100%"
+                    gradientUnits="userSpaceOnUse">
+                </linearGradient>
+            </defs>
+            <rect id="skyBackground" width="100%" height="100%" fill="url(#backgroundGradient)" />
+        </svg>
+        <div id="sidebar" class="sidebar hidden">
+            <div class="buttons-left" onClick="onClickShowOptions()">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div id="reloadButton" class="buttons-left hidden" onClick="onClickReload()">
+                <i class="fas fa-sync"></i>
+            </div>
+            <div id="templatesList" class="templates-list">
+            </div>
+        </div>
+    </div>
+    <script>
+        const FALLING_STARS_MARGINS = {
+            top: 10,
+            right: 50,
+            bottom: 100,
+            left: 0
+        }
+        const MIN_HEIGHT = 100
+        const MAX_NUMBER_OF_FALLING_STARS = 180
+        const MAX_DISTANCE_BETWEEN_FALLING_STARS = 30
+        const MIN_DISTANCE_BETWEEN_FALLING_STARS = 10
+        const STARS_MARGINS = {
+            top: 10,
+            right: 10,
+            bottom: 10,
+            left: 10
+        }
+        const MAX_NUMBER_OF_STARS = 180
+        const MAX_STAR_RADIUS = 1.5
+        const MIN_STAR_RADIUS = 0.2
+        const MAX_DISTANCE_BETWEEN_STARS = 2
+        const MIN_DISTANCE_BETWEEN_STARS = 1
+        const HEIGHT_TO_WIDTH_RATIO = 2.5
+        const MAX_LINE_WIDTH = 6
+        const MIN_LINE_WIDTH = 2
+        let fallingStarTails = []
+        let stars = []
+        let optionsVisible = false
+
+        const createFallingStars = async() => {
+            const generateRandomFallingStars = () => {
+                const maxHeight = document.getElementById('svgContainer').getBoundingClientRect().height - FALLING_STARS_MARGINS.bottom
+                const height = Math.floor(Math.random() * (maxHeight - MIN_HEIGHT)) + MIN_HEIGHT
+
+                const maxWidth = document.getElementById('svgContainer').getBoundingClientRect().width - height / HEIGHT_TO_WIDTH_RATIO - FALLING_STARS_MARGINS.right
+                const minWidth = FALLING_STARS_MARGINS.left
+                const width = Math.floor(Math.random() * (maxWidth - minWidth)) + minWidth
+
+                return {
+                    width: width,
+                    height: height
+                }
+            }
+
+            for (let i = 0; i < MAX_NUMBER_OF_FALLING_STARS; i++) {
+                let pair = generateRandomFallingStars()
+
+                let canAddLine = true
+                fallingStarTails.forEach(line => {
+                    const heightOffset = Math.floor(Math.random() * ((document.getElementById('svgContainer').getBoundingClientRect().height - FALLING_STARS_MARGINS.bottom) - pair.height - FALLING_STARS_MARGINS.bottom)) + pair.height - FALLING_STARS_MARGINS.bottom
+                    if (pair.width < 60) {
+                        pair = Object.assign({
+                            height: pair.height < MIN_HEIGHT ? pair.height : pair.height / 2,
+                            width: pair.width
+                        }, {
+                            heightOffset: heightOffset
+                        })
+
+                        const randomDistance = Math.floor(
+                                Math.random() * (
+                                    MAX_DISTANCE_BETWEEN_FALLING_STARS -
+                                    MIN_DISTANCE_BETWEEN_FALLING_STARS
+                                )) +
+                            MIN_DISTANCE_BETWEEN_FALLING_STARS
+
+                        if (line.height - randomDistance < pair.height &
+                            pair.height < line.height + randomDistance) {
+                            canAddLine = false
+                        }
+                    } else {
+                        const randomDistance = Math.floor(
+                                Math.random() * (
+                                    MAX_DISTANCE_BETWEEN_FALLING_STARS -
+                                    MIN_DISTANCE_BETWEEN_FALLING_STARS
+                                )) +
+                            MIN_DISTANCE_BETWEEN_FALLING_STARS
+
+                        if (line.width - randomDistance < pair.width &
+                            pair.width < line.width + randomDistance) {
+                            canAddLine = false
+                        }
+                    }
+                })
+                canAddLine && fallingStarTails.push(pair)
+            }
+
+            fallingStarTails.forEach(({
+                width,
+                height,
+                heightOffset
+            }, index) => {
+                const alpha = Math.random() * (0.95 - 0.5) + 0.5
+                const angle = HEIGHT_TO_WIDTH_RATIO //Math.random() * (3 - 2.5) + 2.5
+                const lineWidth = Math.random() * (MAX_LINE_WIDTH - MIN_LINE_WIDTH) + MIN_LINE_WIDTH
+                document.getElementById('svgContainer').innerHTML += `
+                <defs id="fallingStarTailGradientDef${index}" >
+                  <linearGradient id="fallingStarTailGradient${index}" 
+                    x1="0%" y1="${FALLING_STARS_MARGINS.top + (heightOffset || 0)}" 
+                    x2="0%" y2="${height + FALLING_STARS_MARGINS.top + (heightOffset || 0)}" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="var(--color-stop-top)" offset="0.4" />
+                    <stop stop-color="var(--color-stop-middle)" offset="${alpha}" />
+                    <stop stop-color="var(--color-stop-bottom)" offset="1" />
+                  </linearGradient>
+                </defs>`
+                document.getElementById('svgContainer').innerHTML += `
+                  <line class="svg-line" id="fallingStarTail${index}" x1='${width}' y1='${FALLING_STARS_MARGINS.top + (heightOffset || 0)}' 
+                  x2='${width + height / angle}' y2='${height + FALLING_STARS_MARGINS.top + (heightOffset || 0)}' 
+                  style='stroke: url(#fallingStarTailGradient${index}); stroke-width: ${lineWidth}' />`
+                document.getElementById('svgContainer').innerHTML += `
+                  <circle id="fallingStar${index}" cx='${width + height / angle}' cy='${height + FALLING_STARS_MARGINS.top + (heightOffset || 0)}' 
+                  r='${lineWidth - 1}' fill='var(--color-circle)' />`
+            })
+        }
+
+        const createStars = async(params) => {
+            const generateRandomStars = () => {
+                const maxY = document.getElementById('svgContainer').getBoundingClientRect().height - STARS_MARGINS.bottom
+                const y = Math.floor(Math.random() * (maxY - STARS_MARGINS.top)) + STARS_MARGINS.top
+
+                const maxX = document.getElementById('svgContainer').getBoundingClientRect().width - STARS_MARGINS.right
+                const x = Math.floor(Math.random() * (maxX - STARS_MARGINS.left)) + STARS_MARGINS.left
+
+                return {
+                    x: x,
+                    y: y
+                }
+            }
+
+            for (let i = 0; i < MAX_NUMBER_OF_STARS; i++) {
+                const pair = generateRandomStars()
+
+                let canAddStar = true
+                stars.forEach(star => {
+                    const distance = Math.sqrt(Math.pow(star.x - pair.x, 2) + Math.pow(star.y - pair.y, 2))
+                    if (distance < MAX_DISTANCE_BETWEEN_STARS & distance > MIN_DISTANCE_BETWEEN_STARS) {
+                        canAddStar = false
+                    }
+                })
+                canAddStar && stars.push(pair)
+            }
+
+            stars.forEach(({
+                x,
+                y
+            }, index) => {
+                const radius = Math.random() * (MAX_STAR_RADIUS - MIN_STAR_RADIUS) + MIN_STAR_RADIUS
+                document.getElementById('svgContainer').innerHTML += `<circle id="star${index}" cx='${x}' cy='${y}' r='${radius}' fill='var(--color-star)' />`
+            })
+        }
+
+        const removeFallingStars = async() => {
+            fallingStarTails = []
+            stars = []
+            document.querySelectorAll('[id^="fallingStar"]')
+                .forEach(fallingStar => fallingStar.parentNode.removeChild(fallingStar))
+            document.querySelectorAll('[id^="fallingStarTail"]')
+                .forEach(fallingStarTail => fallingStarTail.parentNode.removeChild(fallingStarTail))
+            document.querySelectorAll('[id^="fallingStarTailGradientDef"]')
+                .forEach(gradientDef => gradientDef.parentNode.removeChild(gradientDef))
+        }
+
+        const removeStars = async() => {
+            document.querySelectorAll('[id^="star"]').forEach(star => star.parentNode.removeChild(star))
+        }
+
+        const BACKGROUND_TEMPLATES = [
+            [{
+                color: '#0e121a',
+                offset: 0
+            }],
+            [{
+                color: '#06040c',
+                offset: 0
+            }, {
+                color: '#0d091c',
+                offset: 0.35
+            }, {
+                color: '#1f1530',
+                offset: 0.5
+            }, {
+                color: '#492f52',
+                offset: 0.8
+            }, {
+                color: '#8c5062',
+                offset: 0.99
+            }],
+            [{
+                color: '#0d091c',
+                offset: 0
+            }, {
+                color: '#1f1530',
+                offset: 0.35
+            }, {
+                color: '#492f52',
+                offset: 0.5
+            }, {
+                color: '#8c5062',
+                offset: 0.8
+            }, {
+                color: '#d16a45',
+                offset: 0.99
+            }],
+            [{
+                color: '#1c133b',
+                offset: 0
+            }, {
+                color: '#352452',
+                offset: 0.35
+            }, {
+                color: '#664272',
+                offset: 0.5
+            }, {
+                color: '#AF647A',
+                offset: 0.8
+            }, {
+                color: '#f0794f',
+                offset: 0.99
+            }],
+            [{
+                color: '#2E1149',
+                offset: 0
+            }, {
+                color: '#2E2657',
+                offset: 0.25
+            }, {
+                color: '#2E476B',
+                offset: 0.5
+            }, {
+                color: '#2D7489',
+                offset: 0.75
+            }, {
+                color: '#2CA8A8',
+                offset: 1
+            }],
+            [{
+                color: '#060E1B',
+                offset: 0
+            }, {
+                color: '#0D274A',
+                offset: 0.25
+            }, {
+                color: '#115A87',
+                offset: 0.5
+            }, {
+                color: '#0E7FA1',
+                offset: 0.75
+            }, {
+                color: '#00DCDB',
+                offset: 1
+            }]
+
+            ,
+            [{
+                color: '#0C0D2F',
+                offset: 0
+            }, {
+                color: '#332B5B',
+                offset: 0.25
+            }, {
+                color: '#3E3A6D',
+                offset: 0.5
+            }, {
+                color: '#655675',
+                offset: 0.75
+            }, {
+                color: '#B79386',
+                offset: 1
+            }]
+        ]
+
+        let templatesListString = ''
+
+        BACKGROUND_TEMPLATES.forEach((template, index) => {
+            let rectangle = ''
+            rectangle += `
+                <svg class="backgroundTemplate" height="30px" width="30px" onclick="chooseBackground(${index})">
+                    <defs>
+                        <linearGradient id="templateGradient${index}" x1="0%" y1="0%" x2="0%" y2="100%"
+                            gradientUnits="userSpaceOnUse">
+                `
+            template.forEach(values => {
+                rectangle += `<stop stop-color="${values.color}" offset="${values.offset}" />`
+            })
+            rectangle += `
+                        </linearGradient>
+                    </defs>
+                    <rect id="templateGradientRect${index}" width="100%" height="100%" fill="url(#templateGradient${index})" />
+                </svg>
+            `
+            templatesListString += rectangle
+        })
+
+        const chooseBackground = (index) => {
+            let gradient =
+                `<linearGradient id="backgroundGradient" x1="0%" y1="0%" x2="0%" y2="100%"
+                            gradientUnits="userSpaceOnUse">
+                `
+            BACKGROUND_TEMPLATES[index].forEach(values => {
+                gradient += `<stop stop-color="${values.color}" offset="${values.offset}" ></stop>`
+            })
+            gradient += `</linearGradient>`
+
+            document.getElementById('backgroundGradientDef').innerHTML = gradient
+        }
+
+        let rotationTimer;
+        const onClickReload = async() => {
+            document.getElementById('reloadButton').classList.add('rotate')
+            rotationTimer = setTimeout(() => {
+                clearTimeout(rotationTimer)
+                document.getElementById('reloadButton').classList.remove('rotate')
+            }, 700)
+            await removeFallingStars()
+            await removeStars()
+            await createFallingStars()
+            await createStars()
+        }
+
+        const onClickShowOptions = () => {
+            if (optionsVisible) {
+                optionsVisible = false
+                document.getElementById('sidebar').classList.add('hidden')
+                document.getElementById('reloadButton').classList.add('hidden')
+                document.getElementById('templatesList').classList.add('hidden')
+            } else {
+                optionsVisible = true
+                document.getElementById('sidebar').classList.remove('hidden')
+                document.getElementById('reloadButton').classList.remove('hidden')
+                document.getElementById('templatesList').classList.remove('hidden')
+                document.getElementById('templatesList').innerHTML = templatesListString
+            }
+        }
+
+        createFallingStars()
+        createStars()
+    </script>
+</body>
+
+</html>
